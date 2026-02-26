@@ -19,7 +19,14 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ── Middleware ────────────────────────────────────────────────
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://www.thekashmircraft.com',
+    'https://thekashmircraft.com',
+    'https://courier-tracker-gvi5.onrender.com'
+  ]
+}));
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
