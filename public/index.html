@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Track Your Shipment</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --saffron: #FF6B00;
+    --deep: #0A0A0F;
+    --mid: #14141C;
+    --card: #1C1C28;
+    --border: rgba(255,107,0,0.15);
+    --text: #E8E8F0;
+    --muted: #6B6B80;
+    --green: #00E5A0;
+    --blue: #4D9FFF;
+    --red: #FF5555;
+    --white: #ffffff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--deep);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .tracker-widget {
+    width: 100%;
+    max-width: 580px;
+    position: relative;
+  }
+
+  .tracker-widget::before {
+    content: '';
+    position: absolute;
+    top: -80px; left: 50%;
+    transform: translateX(-50%);
+    width: 380px; height: 380px;
+    background: radial-gradient(circle, rgba(255,107,0,0.09) 0%, transparent 68%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .widget-inner {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+  }
+
+  .widget-header {
+    padding: 28px 32px 22px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    background: linear-gradient(135deg, rgba(255,107,0,0.07) 0%, transparent 60%);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .header-icon {
+    width: 46px; height: 46px;
+    background: linear-gradient(135deg, var(--saffron), #FF3D00);
+    border-radius: 13px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+    box-shadow: 0 8px 24px rgba(255,107,0,0.3);
+  }
+
+  .header-text h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px; font-weight: 700;
+    letter-spacing: -0.3px; color: var(--white);
+  }
+
+  .header-text p { font-size: 12px; color: var(--muted); margin-top: 2px; font-weight: 300; }
+
+  .widget-body { padding: 26px 32px; }
+
+  .field-label {
+    font-size: 11px; font-weight: 500;
+    letter-spacing: 0.8px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 10px;
+  }
+
+  .courier-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 22px;
+  }
+
+  .courier-btn {
+    background: var(--mid);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 11px;
+    padding: 10px 8px 9px;
+    cursor: pointer;
+    transition: all 0.18s;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 5px;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px; font-weight: 500;
+    text-align: center; line-height: 1.2;
+  }
+
+  .courier-btn .c-icon { font-size: 17px; }
+
+  .courier-btn:hover {
+    border-color: rgba(255,107,0,0.3);
+    color: var(--text);
+    background: rgba(255,107,0,0.06);
+    transform: translateY(-1px);
+  }
+
+  .courier-btn.active {
+    border-color: var(--saffron);
+    background: rgba(255,107,0,0.1);
+    color: var(--saffron);
+    box-shadow: 0 0 0 1px rgba(255,107,0,0.15);
+  }
+
+  .input-group { display: flex; gap: 10px; }
+
+  .track-input {
+    flex: 1;
+    background: var(--mid);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 400;
+    outline: none; transition: all 0.2s;
+    letter-spacing: 0.6px;
+  }
+
+  .track-input::placeholder { color: var(--muted); font-weight: 300; }
+
+  .track-input:focus {
+    border-color: rgba(255,107,0,0.5);
+    background: rgba(255,107,0,0.04);
+    box-shadow: 0 0 0 3px rgba(255,107,0,0.08);
+  }
+
+  .track-input.shake { animation: shake 0.35s ease; border-color: rgba(255,80,80,0.5); }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-5px); }
+    60% { transform: translateX(5px); }
+    80% { transform: translateX(-3px); }
+  }
+
+  .track-btn {
+    background: linear-gradient(135deg, var(--saffron), #FF3D00);
+    border: none; border-radius: 12px;
+    padding: 14px 22px; color: white;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(255,107,0,0.3);
+    letter-spacing: 0.3px;
+    display: flex; align-items: center; gap: 7px;
+  }
+
+  .track-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,107,0,0.4); }
+  .track-btn:active { transform: translateY(0); }
+  .track-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .result-panel {
+    display: none;
+    margin-top: 22px;
+    animation: fadeUp 0.28s ease both;
+  }
+  .result-panel.visible { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    gap: 10px;
+  }
+
+  .status-info { flex: 1; min-width: 0; }
+
+  .status-courier {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 700;
+    color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+
+  .status-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px; font-weight: 800;
+    color: var(--white); letter-spacing: 0.5px;
+    margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  .status-pill {
+    padding: 7px 16px;
+    border-radius: 30px;
+    font-size: 12px; font-weight: 700;
+    font-family: 'Syne', sans-serif;
+    letter-spacing: 0.3px; flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .status-pill.delivered   { background: rgba(0,229,160,0.12); color: var(--green); border: 1px solid rgba(0,229,160,0.25); }
+  .status-pill.in-transit  { background: rgba(77,159,255,0.12); color: var(--blue); border: 1px solid rgba(77,159,255,0.25); }
+  .status-pill.out-delivery{ background: rgba(255,200,0,0.12); color: #FFD000; border: 1px solid rgba(255,200,0,0.25); }
+  .status-pill.booked      { background: rgba(255,107,0,0.10); color: var(--saffron); border: 1px solid rgba(255,107,0,0.25); }
+  .status-pill.failed      { background: rgba(255,85,85,0.10); color: var(--red); border: 1px solid rgba(255,85,85,0.25); }
+  .status-pill.returned    { background: rgba(200,100,255,0.10); color: #C864FF; border: 1px solid rgba(200,100,255,0.25); }
+
+  .edd-bar {
+    background: rgba(0,229,160,0.05);
+    border: 1px solid rgba(0,229,160,0.12);
+    border-radius: 10px;
+    padding: 11px 14px;
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 18px;
+  }
+  .edd-bar .edd-icon { font-size: 15px; }
+  .edd-bar .edd-label { font-size: 11px; color: var(--muted); font-weight: 300; }
+  .edd-bar .edd-date { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--green); }
+
+  .timeline-label { margin-bottom: 12px; }
+
+  .timeline { position: relative; padding-left: 22px; }
+
+  .timeline::before {
+    content: '';
+    position: absolute; left: 6px; top: 8px; bottom: 8px;
+    width: 1px; background: rgba(255,255,255,0.07);
+  }
+
+  .timeline-item {
+    position: relative;
+    padding: 0 0 16px 14px;
+    animation: fadeUp 0.3s ease both;
+  }
+  .timeline-item:last-child { padding-bottom: 0; }
+
+  .timeline-item::before {
+    content: '';
+    position: absolute; left: -16px; top: 6px;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--mid);
+    border: 2px solid var(--muted);
+  }
+
+  .timeline-item.latest::before {
+    background: var(--saffron);
+    border-color: var(--saffron);
+    box-shadow: 0 0 0 3px rgba(255,107,0,0.15);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(255,107,0,0.15); }
+    50% { box-shadow: 0 0 0 7px rgba(255,107,0,0.04); }
+  }
+
+  .timeline-event {
+    font-size: 13px; font-weight: 500;
+    color: var(--text); line-height: 1.4;
+  }
+  .timeline-item.latest .timeline-event { color: var(--white); font-weight: 600; }
+
+  .timeline-meta {
+    font-size: 11px; color: var(--muted);
+    margin-top: 3px; display: flex; gap: 10px;
+    font-weight: 300; flex-wrap: wrap;
+  }
+
+  .error-state {
+    background: rgba(255,85,85,0.06);
+    border: 1px solid rgba(255,85,85,0.15);
+    border-radius: 12px; padding: 18px 16px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .error-state .err-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .error-state .err-title { font-weight: 600; color: var(--red); font-size: 13px; margin-bottom: 4px; }
+  .error-state .err-msg { font-size: 12px; color: var(--muted); line-height: 1.5; font-weight: 300; }
+
+  .widget-footer {
+    padding: 12px 32px 18px;
+    font-size: 11px; color: rgba(107,107,128,0.55);
+    text-align: center; font-weight: 300;
+    border-top: 1px solid rgba(255,255,255,0.04);
+  }
+
+  @media (max-width: 440px) {
+    .widget-body { padding: 20px; }
+    .widget-header { padding: 20px 20px 18px; }
+    .widget-footer { padding: 12px 20px 16px; }
+    .courier-grid { grid-template-columns: repeat(2, 1fr); }
+    .input-group { flex-direction: column; }
+    .status-bar { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div class="tracker-widget">
+  <div class="widget-inner">
+
+    <div class="widget-header">
+      <div class="header-icon">📦</div>
+      <div class="header-text">
+        <h2>Track Your Shipment</h2>
+        <p>Real-time tracking · All major Indian couriers</p>
+      </div>
+    </div>
+
+    <div class="widget-body">
+
+      <div class="field-label">Select Courier</div>
+      <div class="courier-grid">
+        <button class="courier-btn active" data-courier="indiapost" onclick="selectCourier(this)">
+          <span class="c-icon">🏛️</span>India Post
+        </button>
+        <button class="courier-btn" data-courier="bluedart" onclick="selectCourier(this)">
+          <span class="c-icon">🔵</span>Blue Dart
+        </button>
+        <button class="courier-btn" data-courier="delhivery" onclick="selectCourier(this)">
+          <span class="c-icon">🚚</span>Delhivery
+        </button>
+        <button class="courier-btn" data-courier="dtdc" onclick="selectCourier(this)">
+          <span class="c-icon">🟠</span>DTDC
+        </button>
+        <button class="courier-btn" data-courier="ekart" onclick="selectCourier(this)">
+          <span class="c-icon">🛒</span>Ekart
+        </button>
+        <button class="courier-btn" data-courier="xpressbees" onclick="selectCourier(this)">
+          <span class="c-icon">🐝</span>XpressBees
+        </button>
+        <button class="courier-btn" data-courier="shadowfax" onclick="selectCourier(this)">
+          <span class="c-icon">⚡</span>Shadowfax
+        </button>
+        <button class="courier-btn" data-courier="ecom" onclick="selectCourier(this)">
+          <span class="c-icon">📬</span>Ecom Express
+        </button>
+        <button class="courier-btn" data-courier="amazon" onclick="selectCourier(this)">
+          <span class="c-icon">📦</span>Amazon
+        </button>
+      </div>
+
+      <div class="field-label">Tracking / AWB Number</div>
+      <div class="input-group">
+        <input
+          type="text"
+          class="track-input"
+          id="trackingInput"
+          placeholder="e.g. EE123456789IN"
+          onkeydown="if(event.key==='Enter') trackShipment()"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button class="track-btn" id="trackBtn" onclick="trackShipment()">
+          <span id="btnText">Track →</span>
+        </button>
+      </div>
+
+      <div class="result-panel" id="resultPanel">
+        <div id="resultContent"></div>
+      </div>
+
+    </div>
+
+    <div class="widget-footer">
+      Live data from official courier sites · Free forever
+    </div>
+  </div>
+</div>
+
+<script>
+  const API_BASE = window.location.origin;
+  let selectedCourier = 'indiapost';
+
+  const STATUS_CONFIG = {
+    'Delivered':        { cls: 'delivered',    label: 'Delivered ✓' },
+    'Out for Delivery': { cls: 'out-delivery', label: 'Out for Delivery' },
+    'In Transit':       { cls: 'in-transit',   label: 'In Transit' },
+    'Booked':           { cls: 'booked',       label: 'Booked' },
+    'Delivery Failed':  { cls: 'failed',       label: 'Delivery Failed' },
+    'Returned':         { cls: 'returned',     label: 'Returned' },
+  };
+
+  function selectCourier(btn) {
+    document.querySelectorAll('.courier-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedCourier = btn.dataset.courier;
+    document.getElementById('resultPanel').classList.remove('visible');
+  }
+
+  async function trackShipment() {
+    const input = document.getElementById('trackingInput');
+    const num = input.value.trim().toUpperCase();
+
+    if (!num) {
+      input.classList.add('shake');
+      setTimeout(() => input.classList.remove('shake'), 400);
+      input.focus();
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/track?courier=${selectedCourier}&number=${encodeURIComponent(num)}`);
+      const data = await res.json();
+      if (data.success) {
+        renderSuccess(data);
+      } else {
+        renderError(data.error || 'Could not fetch tracking data.');
+      }
+    } catch (err) {
+      renderError('Could not connect to the tracking server.');
+    }
+
+    setLoading(false);
+  }
+
+  function renderSuccess(data) {
+    const sc = STATUS_CONFIG[data.status] || { cls: 'in-transit', label: data.status || 'Unknown' };
+
+    const eddHTML = data.estimatedDelivery && data.status !== 'Delivered' ? `
+      <div class="edd-bar">
+        <span class="edd-icon">📅</span>
+        <div>
+          <div class="edd-label">Estimated Delivery</div>
+          <div class="edd-date">${formatDate(data.estimatedDelivery)}</div>
+        </div>
+      </div>` : '';
+
+    const eventsHTML = (data.events || []).map((e, i) => `
+      <div class="timeline-item ${i === 0 ? 'latest' : ''}" style="animation-delay:${i * 0.05}s">
+        <div class="timeline-event">${escHtml(e.event)}</div>
+        <div class="timeline-meta">
+          ${e.location ? `<span>📍 ${escHtml(e.location)}</span>` : ''}
+          ${e.date ? `<span>${escHtml(e.date)}</span>` : ''}
+        </div>
+      </div>`).join('');
+
+    document.getElementById('resultContent').innerHTML = `
+      <div class="status-bar">
+        <div class="status-info">
+          <div class="status-courier">${escHtml(data.courier)}</div>
+          <div class="status-num">${escHtml(data.trackingNumber)}</div>
+        </div>
+        <div class="status-pill ${sc.cls}">${sc.label}</div>
+      </div>
+      ${eddHTML}
+      <div class="field-label timeline-label">Tracking History</div>
+      <div class="timeline">${eventsHTML || '<p style="color:var(--muted);font-size:13px">No events recorded yet.</p>'}</div>
+    `;
+
+    showResult();
+  }
+
+  function renderError(msg) {
+    document.getElementById('resultContent').innerHTML = `
+      <div class="error-state">
+        <div class="err-icon">⚠️</div>
+        <div>
+          <div class="err-title">Tracking Failed</div>
+          <div class="err-msg">${escHtml(msg)}</div>
+        </div>
+      </div>`;
+    showResult();
+  }
+
+  function showResult() {
+    const panel = document.getElementById('resultPanel');
+    panel.classList.remove('visible');
+    void panel.offsetWidth;
+    panel.classList.add('visible');
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function setLoading(on) {
+    const btn = document.getElementById('trackBtn');
+    btn.disabled = on;
+    btn.innerHTML = on
+      ? '<div class="spinner"></div><span>Tracking…</span>'
+      : '<span id="btnText">Track →</span>';
+  }
+
+  function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function formatDate(d) {
+    try { return new Date(d).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }); }
+    catch { return d; }
+  }
+</script>
+
+</body>
+</html>
