@@ -45,42 +45,51 @@ async function trackBlueDart(trackingNumber) {
 // ─── DTDC ────────────────────────────────────────────────────
 async function trackDTDC(trackingNumber) {
   try {
-    const resp = await axios.get(
-      `https://www.dtdc.in/trace-result.asp?TrkNo=${trackingNumber}`,
-      { headers: HEADERS, timeout: 15000 }
-    );
-    const $ = cheerio.load(resp.data);
-    const events = [];
-
-    $('table tr').each((i, row) => {
-      if (i === 0) return;
-      const cells = $(row).find('td');
-      if (cells.length >= 2) {
-        const date = $(cells[0]).text().trim();
-        const event = $(cells[1]).text().trim();
-        const location = cells[2] ? $(cells[2]).text().trim() : '';
-        if (date && event) events.push({ date, event, location });
+    const resp = await axios.post(
+      'https://www.dtdc.in/trace/trackingRequest.asp',
+      `strCnno=${trackingNumber}&addColDetail=0`,
+      {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json, text/javascript, */*',
+          'Referer': 'https://www.dtdc.in/',
+          'Origin': 'https://www.dtdc.in',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        timeout: 15000,
       }
-    });
+    );
 
-    if (!events.length) return { success: false, error: 'No data found for this DTDC number.' };
+    const data = resp.data;
 
+    if (data && data.length > 0) {
+      const events = data.map(e => ({
+        date: e.dateTime || e.strDate || '',
+        event: e.strAction || e.activity || '',
+        location: e.strLocation || e.location || '',
+      }));
+
+      return {
+        success: true,
+        courier: 'DTDC',
+        trackingNumber,
+        status: detectStatus(events[0]?.event || ''),
+        events,
+      };
+    }
+    throw new Error('Empty');
+  } catch(e) {
     return {
-      success: true,
-      courier: 'DTDC',
-      trackingNumber,
-      status: detectStatus(events[0].event),
-      events,
+      success: false,
+      error: 'DTDC tracking is currently unavailable. Please try again shortly.',
     };
-  } catch (e) {
-    return { success: false, error: 'DTDC tracking failed. Try again.' };
   }
 }
 
 // ─── EKART ───────────────────────────────────────────────────
 async function trackEkart(trackingNumber) {
   try {
-    // Ekart has a JSON API endpoint
     const resp = await axios.get(
       `https://ekartlogistics.com/api/trackdetail?trackingId=${trackingNumber}`,
       {
@@ -104,9 +113,8 @@ async function trackEkart(trackingNumber) {
         events,
       };
     }
-    return { success: false, error: 'No tracking data from Ekart.' };
+    throw new Error('No data');
   } catch (e) {
-    // Fallback HTML scrape
     try {
       const resp = await axios.get(
         `https://ekartlogistics.com/shipmenttrack/${trackingNumber}`,
@@ -119,7 +127,13 @@ async function trackEkart(trackingNumber) {
         if (text) events.push({ date: '', event: text, location: '' });
       });
       if (!events.length) return { success: false, error: 'No Ekart data found.' };
-      return { success: true, courier: 'Ekart Logistics', trackingNumber, status: detectStatus(events[0].event), events };
+      return {
+        success: true,
+        courier: 'Ekart Logistics',
+        trackingNumber,
+        status: detectStatus(events[0].event),
+        events,
+      };
     } catch (_) {
       return { success: false, error: 'Ekart tracking failed.' };
     }
@@ -233,7 +247,6 @@ async function trackAmazon(trackingNumber) {
     );
     const $ = cheerio.load(resp.data);
 
-    // Amazon embeds tracking data in a __NEXT_DATA__ script tag
     let events = [];
     const scriptContent = $('script#__NEXT_DATA__').html();
     if (scriptContent) {
@@ -273,7 +286,7 @@ async function trackAmazon(trackingNumber) {
 // ─── SHARED STATUS DETECTION ─────────────────────────────────
 function detectStatus(eventText) {
   const t = (eventText || '').toLowerCase();
-  if ((t.includes('deliver') && !t.includes('undeliver') && !t.includes('out for') && !t.includes('failed'))) return 'Delivered';
+  if (t.includes('deliver') && !t.includes('undeliver') && !t.includes('out for') && !t.includes('failed')) return 'Delivered';
   if (t.includes('out for delivery')) return 'Out for Delivery';
   if (t.includes('return')) return 'Returned';
   if (t.includes('fail') || t.includes('undeliver') || t.includes('rto')) return 'Delivery Failed';
